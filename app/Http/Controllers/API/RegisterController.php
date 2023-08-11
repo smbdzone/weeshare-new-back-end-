@@ -6,19 +6,24 @@ namespace App\Http\Controllers\API;
 
    
 
+use App\Models\EmailConfig; 
+use App\Models\EmailTemplate;
+use App\Models\VerifyUser;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 
 use App\Http\Controllers\API\BaseController as BaseController;
 
-use App\Models\User;
-
+use App\Models\User; 
 
 use Illuminate\Support\Facades\Auth;
 
 use Validator;
-
+use Illuminate\Support\Str;
    
+use PHPMailer\PHPMailer\PHPMailer; 
+use PHPMailer\PHPMailer\Exception;
+
 
 class RegisterController extends BaseController
 
@@ -72,13 +77,90 @@ class RegisterController extends BaseController
 
         $user = User::create($input);
 
-        $success['token'] =  $user->createToken('MyApp')->plainTextToken;
+        $user_id = $user->id;
 
-        $success['name'] =  $user->name;
 
-   
+        if($user_id) {
+            // $success['token'] =  $user->createToken('MyApp')->plainTextToken;
+ 
+            $success['user_type'] =  $user->user_type; 
+            $success['name'] =  $user->name;  
+            $success['email'] =  $user->email; 
+            $success['email_verified_at'] =  $user->email_verified_at; 
+            $success['profile_picture'] =  $user->profile_picture; 
+       
 
-        return $this->sendResponse($success, 'User register successfully.');
+            $verifyUser = VerifyUser::where(['user_id' => $user_id])->first(['id']);
+
+            if (empty($verifyUser))
+            {
+                $token  = Str::random(40);
+                $verifyUserNewRecord          = new VerifyUser();
+                $verifyUserNewRecord->user_id  = $user_id;
+                $verifyUserNewRecord->token   = $token;
+                $verifyUserNewRecord->save();
+            }
+
+            // url($company->companySEOURL .'/'. $seo->seo .'/verify-profile', $token)
+            
+            $email_config = EmailConfig::where('id', 1)->first();
+            $email_content = EmailTemplate::where('type','=', 'registration')->first();
+            $subject =  $email_content->subject;
+            $tempbody =  $email_content->body;
+
+            $userName = $user->name;
+            $verificationLink = url('api/verify-user', $token);
+
+
+            $search = array('{UserName}', '{VerificationLink}');
+            $replace = array($userName, $verificationLink);
+
+            $body = str_replace($search, $replace, $tempbody);
+
+            require 'PHPMailer/vendor/autoload.php';
+
+            //Create an instance; passing `true` enables exceptions
+            $mail = new PHPMailer(true);
+    
+    
+            try {
+
+                $mail->SMTPDebug = 0;                      //Enable verbose debug output
+                $mail->isSMTP();                                            //Send using SMTP
+                $mail->Host       = $email_config->smtp_host;
+                //Set the SMTP server to send through
+                $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
+                $mail->Username   = $email_config->smtp_username;
+                //SMTP username
+                $mail->Password   = $email_config->smtp_password;                           //SMTP password
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+
+                $mail->Port       = $email_config->smtp_port;                                     //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+                //Recipients
+                $mail->setFrom($email_config->from_address, $email_config->from_name);
+                $mail->addAddress($user->email);
+    
+    
+                //Content
+                $mail->isHTML(true);                                  //Set email format to HTML
+                $mail->Subject = $subject;
+                $mail->Body = $body; 
+                $mail->send();
+
+                return $this->sendResponse($success, 'Thank you for registration, Please verify your email to continue.');
+                
+            } catch (Exception $e) { 
+                return $this->sendError("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+            }
+    
+
+            // return $this->sendResponse($success, 'User register successfully.');
+
+        } else {
+            return $this->sendError('Something went wrong with the registration, please try agian.');
+        }
+
+        
 
     }
 
@@ -121,7 +203,7 @@ class RegisterController extends BaseController
         }
 
 
-        if(Auth::attempt(['email' => $request->email, 'password' => $request->password])){ 
+        if(Auth::attempt(['email' => $request->email, 'password' => $request->password, 'status' => '1'])){ 
 
             $user = Auth::user(); 
 
@@ -144,22 +226,137 @@ class RegisterController extends BaseController
 
     }
 
- 
-    public function index() {
-       $industries =  $this->industries();
-       return $this->sendResponse($industries, 'Industries list');
+
+
+
+    public function verify_user($token){
+
+        // dd('i m here');
+        $success = array();
+        if(!empty($token))
+        {
+            $token = VerifyUser::select('user_id')->where('token', $token)->first();
+
+            $user_id = $token->user_id;
+
+            if(!empty($user_id))
+            {
+                // dd($user_id);
+                $profile = User::where('id', $user_id)->first();
+                $profile->update([ 'status' => '1' ]); 
+
+                $primaryEmailAddress = $profile->email;
+                $profileName         =   $profile->name;
+                //dd($primaryEmailAddress);
+
+
+                $email_config = EmailConfig::where('id', 1)->first();
+                $email_content = EmailTemplate::where('type', 'user_verified')->first();
+                $subject =  $email_content->subject;
+                $tempbody =  $email_content->body;
+                //dd($body);
+
+                $loginLink = url('login');
+
+                $search = array('{UserName}', '{LoginLink}');
+                $replace = array($profileName, $loginLink);
+
+                $body = str_replace($search, $replace, $tempbody);
+                
+                //dd($userVerificationEmailTempInfo_msg);
+                //Load Composer's autoloader
+                require 'PHPMailer/vendor/autoload.php';
+
+                //Create an instance; passing `true` enables exceptions
+                $mail = new PHPMailer(true);
+                try {
+                    //Server settings
+                    $mail->SMTPDebug = 0;                      //Enable verbose debug output
+                    $mail->isSMTP();                                            //Send using SMTP
+                    $mail->Host       = $email_config->smtp_host;
+                    //Set the SMTP server to send through
+                    $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
+                    $mail->Username   = $email_config->smtp_username;
+                    //SMTP username
+                    $mail->Password   = $email_config->smtp_password;                           //SMTP password
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+                    $mail->Port       = $email_config->smtp_port;                              //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+
+                    //Recipients
+                    $mail->setFrom($email_config->from_address, $email_config->from_name);
+                    $mail->addAddress($primaryEmailAddress);
+
+                    //Content
+                    $mail->isHTML(true);                                  //Set email format to HTML
+                    $mail->Subject =  $subject;
+                    $mail->Body =   $body;
+
+                    //dd('success');
+                    $send = $mail->send();
+
+
+                    return $this->sendResponse($success, 'Thank you, your email has been verified.');
+                
+                } catch (Exception $e) { 
+                    return $this->sendError("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+                }
+        
+
+            }
+
+
+
+        }
+
     }
 
+
+
+    // public function countries(){
+    //     $countries = Country::all();
+    //     return $this->sendResponse($countries, 'Countries list');
+    // }
+    // public function states($countryID){ 
+    //     $states = State::where('country_id', $countryID)->get();
+    //     return $this->sendResponse($states, 'States list');
+    // }
+    // public function cities($countryID, $stateID){ 
+    //     $cities = City::where('country_id', $countryID)->where('state_id', $stateID)->get();
+    //     return $this->sendResponse($cities, 'Cities list');
+    // }
     // public function industries(){
     //     $industries = Industry::all();
     //     return $this->sendResponse($industries, 'Industries list');
     // }
-
-    // public function countries(){
-    //     $industries = Industry::all();
-    //     return $this->sendResponse($industries, 'Industries list');
+  
+    // public function social_media_types(){
+    //     $medias = SocialMediaType::where('status', '1');
+    //     return $this->sendResponse($medias, 'Social Media Type list');
     // }
 
+
+ 
+    // public function industries() {
+    //    $industries =  $this->industries();
+    //    return $this->sendResponse($industries, 'Industries list');
+    // }
+
+    // public function countries() {
+    //     $countries =  $this->countries();
+    //     return $this->sendResponse($countries, 'countries list');
+    // }
+
+    // public function states($countryID) {
+    //     $states =  $this->states($countryID);
+    //     return $this->sendResponse($states, 'states list');
+    // }
+    
+    // public function cities($countryID, $stateID) {
+    //     $cities =  $this->cities($countryID, $stateID);
+    //     return $this->sendResponse($cities, 'cities list');
+    // }
+
+ 
 
 }
 

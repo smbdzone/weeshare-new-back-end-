@@ -17,10 +17,12 @@ class PostController extends BaseController
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $posts = Post::all();
-    
+        // $userID = auth()->user()->id;
+        // return $this->sendResponse($userID, 'userID');
+  
+        $posts = Post::where('user_id', auth()->user()->id)->get(); 
         return $this->sendResponse(PostResource::collection($posts), 'Posts retrieved successfully.');
     }
     /**
@@ -34,10 +36,20 @@ class PostController extends BaseController
         $input = $request->all();
    
         $validator = Validator::make($input, [
-            'name' => 'required',
-            'detail' => 'required'
+            'user_id' => 'required',
+            'social_id' => 'required', 
+            'post_type' => 'required', 
+            'media_img' => 'required', 
+            'media_content' => 'required', 
+            'post_on' => 'required', 
+            'country' => 'required',  
+            'state' => 'required', 
+            'city' => 'required', 
+            'gender' => 'required', 
+            'age' => 'required', 
+            'date' => 'required',  
         ]);
-   
+ 
         if($validator->fails()){
             return $this->sendError('Validation Error.', $validator->errors());       
         }
