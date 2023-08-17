@@ -22,8 +22,16 @@ class User extends Authenticatable
         'user_type',
         'name',
         'email',
-        'password',
+        'password', 
+        'phone_no',
+        'biography',
+        'country_id',
+        'state_id',
+        'city_id',
+        'address',
+        'postcode', 
         'status',
+        'profile_picture'
     ];
 
     /**
@@ -44,5 +52,10 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
-    ];
+    ]; 
+
+    public function user_posts(){
+        return $this->hasMany(Post::class,'user_id');
+    }
+
 }

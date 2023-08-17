@@ -16,6 +16,12 @@ class AdvertiserController extends BaseController
 {
    
 
+    public function __construct(Request $request){
+ 
+        // $getuser = $request->user();
+
+        
+    }
     /**
      * Display a listing of the resource.
      *
@@ -30,17 +36,123 @@ class AdvertiserController extends BaseController
         // $packages = UserPackage::where('user', Auth::user());
 
 
-        $userPackage = UserPackage::where('user_id', $request->user_id);
-        if (is_null($userPackage)) {
-            return $this->sendError('Package not found.');
+        // $userPackage = UserPackage::where('user_id', $request->user_id);
+        // if (is_null($userPackage)) {
+        //     return $this->sendError('Package not found.');
+        // } 
+
+        return $this->sendResponse('This is index page', 'Advertiser Controller'); 
+    }
+
+    public function profile_image(Request $request) {
+
+        $extension = request()->file('profile_picture')->extension();
+
+        // return $this->sendError($extension, 'only these extensions are allowed.'); 
+
+        $extension_array = array('jpg', 'jpeg', 'png');
+
+        if (!in_array($extension, $extension_array)) {
+            return $this->sendError('jpg, jpeg, png', 'only these extensions are allowed.'); 
+        }
+ 
+
+        $getuser = $request->user();
+        $user = User::where('id', $getuser->id)->latest()->first();    
+        if (is_null($user)) {
+            return $this->sendError('Profile not found.');
+        }  
+
+        if (request()->file('profile_picture')) {
+
+            $filename = rand() . '_' . $request->file('profile_picture')->getClientOriginalName();
+            $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
+
+            $user->update([
+                'profile_picture' => $filename,
+            ]);
         } 
 
-        return $this->sendResponse($userPackage, 'User Packages retrieved successfully.'); 
+        // $data = array('user' => $user);
+        return $this->sendResponse($user, 'Advertiser Profile'); 
+    }
+
+    //View Profile
+    public function view_profile(Request $request)
+    {    
+        $getuser = $request->user();
+        $user = User::where('id', $getuser->id)->latest()->first();    
+        if (is_null($user)) {
+            return $this->sendError('Profile not found.');
+        }  
+
+        $data = array('user' => $user);
+        return $this->sendResponse($data, 'Advertiser Profile'); 
     }
 
 
-    public function user_packages($user_id)
+    // Edit Profile
+    public function edit_profile(Request $request)
     {    
+        $getuser = $request->user();
+        $user = User::where('id', $getuser->id)->latest()->first();    
+        if (is_null($user)) {
+            return $this->sendError('Profile not found.');
+        }  
+
+        $data = array('user' => $user);
+        return $this->sendResponse($data, 'Advertiser Profile'); 
+    }
+
+
+    //Update Profile
+    public function update_profile(Request $request)
+    {    
+ 
+        $validator = Validator::make($request->all(), [ 
+            'name' => 'required',  
+            'phone_no' => 'required', 
+            'biography' => 'required', 
+            'country_id' => 'required', 
+            'state_id' => 'required', 
+            'city_id' => 'required', 
+            'address' => 'required', 
+            'postcode' => 'required',  
+        ]); 
+
+        if($validator->fails()){ 
+            return $this->sendError('Validation Error.', $validator->errors());        
+        }
+
+
+        $getuser = $request->user();
+        $user = User::where('id', $getuser->id)->latest()->first();    
+        if (is_null($user)) {
+            return $this->sendError('Profile not found.');
+        }  
+
+        $user->update([
+            'name' => $request->name, 
+            'phone_no' => $request->phone_no,
+            'biography' => $request->biography,
+            'country_id' => $request->country_id,
+            'state_id' => $request->state_id,
+            'city_id' => $request->city_id,
+            'address' => $request->address,
+            'postcode' => $request->postcode,
+        ]);  
+
+
+        $data = array('user' => $user);
+        return $this->sendResponse($data, 'Advertiser Profile'); 
+    }
+
+
+    //User Packages
+    public function user_packages(Request $request)
+    {    
+        $getuser = $request->user();
+        $user_id = $getuser->id;
         $userPackage = UserPackage::where('user_id', $user_id)->latest()->first();    
         if (is_null($userPackage)) {
             return $this->sendError('Package not found.');
@@ -53,14 +165,21 @@ class AdvertiserController extends BaseController
     public function purchase_package(Request $request)
     {    
 
-        $user_id = $request->user_id;
+        $user = $request->user();
+        $user_id = $user->id;
         $package_id = $request->package_id;
+ 
 
-        if(is_null($user_id) || is_null($package_id)) {
-            return $this->sendError('Something went wrong, please try again.');
+        if(is_null($user_id)) {
+            return $this->sendError('User is not logged in.');
         }
 
-        // $package_id = 1;
+        if(is_null($package_id)) {
+            return $this->sendError('Please select a package and continue.');
+        }
+
+        
+
 
         $package = Package::where('id', $package_id)->first();
         $package_days = $package->expirydays;

@@ -8,8 +8,10 @@ namespace App\Http\Controllers\API;
 
 use App\Models\EmailConfig; 
 use App\Models\EmailTemplate;
+use App\Models\PasswordResetToken;
 use App\Models\VerifyUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rules\Password;
 
 use App\Http\Controllers\API\BaseController as BaseController;
@@ -212,7 +214,14 @@ class RegisterController extends BaseController
             $success['name'] =  $user->name;  
             $success['email'] =  $user->email; 
             $success['email_verified_at'] =  $user->email_verified_at; 
-            $success['profile_picture'] =  $user->profile_picture; 
+            $success['phone_no'] =  $user->phone_no; 
+            $success['biography'] =  $user->biography; 
+            $success['country_id'] =  $user->country_id; 
+            $success['state_id'] =  $user->state_id; 
+            $success['city_id'] =  $user->city_id; 
+            $success['address'] =  $user->address; 
+            $success['postcode'] =  $user->postcode; 
+            $success['profile_picture'] =  $user->profile_picture;  
 
             return $this->sendResponse($success, 'User login successfully.');
 
@@ -227,9 +236,99 @@ class RegisterController extends BaseController
     }
 
 
+    public function forgot_password(Request $request)
+    {
+        // dd($request);
+ 
+        $primaryEmailAddress = $request->email;  
+        $token = Str::random(64);
+
+        $exists = User::where('email', $primaryEmailAddress)->exists();
+        $success = array();
+        if($exists == true) {
+
+            PasswordResetToken::insert([
+                'email' => $primaryEmailAddress,
+                'token' => $token,
+                'created_at' => Carbon::now()
+            ]);
 
 
-    public function verify_user($token){
+            $email_config = EmailConfig::where('id', 1)->first();
+            $email_content = EmailTemplate::where('type', '=', 'forgot_password')->first();
+            $subject =  $email_content->subject;
+            $body =  $email_content->body;
+
+            
+            $body_forgot = str_replace('{ResetPasswordLink}', url('reset-password', $token), $body);
+
+            //Load Composer's autoloader
+            require 'PHPMailer/vendor/autoload.php';
+
+            //dd($email_config);
+            //Create an instance; passing `true` enables exceptions
+            $mail = new PHPMailer(true);
+            try {
+                //Server settings
+                $mail->SMTPDebug = 0;                      //Enable verbose debug output
+                $mail->isSMTP();                                            //Send using SMTP
+                $mail->Host       = $email_config->smtp_host;
+                //Set the SMTP server to send through
+                $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
+                $mail->Username   = $email_config->smtp_username;
+                //SMTP username
+                $mail->Password   = $email_config->smtp_password;                           //SMTP password
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+
+                $mail->Port       = $email_config->smtp_port;                                     //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+                //Recipients
+                $mail->setFrom($email_config->from_address, $email_config->from_name);
+                $mail->addAddress($primaryEmailAddress);
+
+                //Content
+                $mail->isHTML(true);                                  //Set email format to HTML
+                $mail->Subject =  $subject;
+                $mail->Body =   $body_forgot;
+
+                $send = $mail->send();
+
+                // dd($send);
+
+                return $this->sendResponse($success, 'We have send you an email to reset your password!');
+ 
+
+                // $company = mh_companies::find(request()->get('companyID'));
+                // $seo = mh_journals::find(request()->get('journalID'));
+                //return redirect()->route('esubmit-login', [$company->companySEOURL, $seo->seo])->with('message', 'You are successfully registered, please check your email to activate your account.');
+
+            } catch (Exception $e) {
+                return $this->sendError('email not sent.',  "Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+                
+            }
+
+
+            // return $this->sendResponse($exists, 'User Exists');
+
+        } else {
+            return $this->sendResponse($exists, 'User Doesn\'t Exists');
+        }
+
+      
+        
+
+
+        // Mail::send('frontend.email-password', ['company' =>$company,'seo' =>$seo,'token' => $token, ], function($message) use($request){
+        //     $message->to($request->email);
+        //     $message->subject('Reset Password');
+        // });
+
+
+    }
+
+
+
+    public function verify_user($token)
+    {
 
         // dd('i m here');
         $success = array();
@@ -243,7 +342,7 @@ class RegisterController extends BaseController
             {
                 // dd($user_id);
                 $profile = User::where('id', $user_id)->first();
-                $profile->update([ 'status' => '1' ]); 
+                $profile->update([ 'status' => '1', 'email_verified_at' => NOW() ]); 
 
                 $primaryEmailAddress = $profile->email;
                 $profileName         =   $profile->name;

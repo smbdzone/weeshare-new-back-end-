@@ -10,7 +10,36 @@ class Post extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'social_id',	'type',	'media_img', 'media_content', 'post_on', 'country',	'city',	'gender',	'age',	'date',	'status'
+        'user_id', 
+        'socialmediatype_id', 
+        'post_type', 
+        'post_media', 
+        'post_content', 
+        'country_id', 
+        'state_id',	
+        'city_id',	
+        'gender',	
+        'age',	
+        'schedule_at',	
+        'status'
     ];
+
+    public function posts_contents(){
+        return $this->hasMany(PostsContent::class,'post_id');
+    }
+
+    public function posts_medias(){
+        return $this->hasMany(PostsMedia::class,'post_id');
+    }
+
+    public function user(){
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+
+    // public function category() {
+    //     return $this->belongsTo('App\Category', 'category_id');
+    // }
+
 
 }
