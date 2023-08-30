@@ -29,4 +29,10 @@ class Package extends Model
         'cancel_status',
     ];
 
+
+    public function features(){
+        return $this->hasMany(PackageFeature::class,'package_id');
+    }
+
+
 }

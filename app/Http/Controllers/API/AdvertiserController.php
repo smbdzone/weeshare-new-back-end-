@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Package;
 use App\Models\UserPackage;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Role;
 use Validator;
 use App\Http\Resources\PackageResource;
 use Carbon\Carbon;
@@ -40,8 +41,25 @@ class AdvertiserController extends BaseController
         // if (is_null($userPackage)) {
         //     return $this->sendError('Package not found.');
         // } 
+        
+        // if (is_null($check_package)) {
+        //     $user['package'] = null;
+        //     // return $this->sendError('Package not found.');
+        // } 
 
-        return $this->sendResponse('This is index page', 'Advertiser Controller'); 
+
+        $user = $request->user(); 
+        $user_id = $user->id;
+
+        // Check Package
+        $check_package = UserPackage::where('user_id', $user_id)->first();
+
+        // Survey Status
+
+
+
+        $user['package'] = $check_package;
+        return $this->sendResponse($user, 'Advertiser Dashboard'); 
     }
 
     public function profile_image(Request $request) {
@@ -171,7 +189,7 @@ class AdvertiserController extends BaseController
  
 
         if(is_null($user_id)) {
-            return $this->sendError('User is not logged in.');
+            return $this->sendError('You are not logged in, pleae login to continue.');
         }
 
         if(is_null($package_id)) {
@@ -179,7 +197,30 @@ class AdvertiserController extends BaseController
         }
 
         
+        // 1. Purchase free trial
+        // - check if already have free trial
 
+
+        // 2. Purchase Basic Plan
+        // - Check if free trial is purchased, then add the days if it is not expired.
+
+        // 3. Purchase Business Plan
+        // - Check if free trial is purchased, then add the days if it is not expired.
+        // - Check if basic plan is purchased, then add the days if it is not expired.
+        
+
+        $check_package = UserPackage::where('user_id', $user_id)
+        ->where('expiry_status', '0')
+        ->where('package_id', $package_id)
+        ->latest()->first();
+
+        // return $this->sendResponse($check_package, 'Check user package'); 
+       
+
+        if(!is_null($check_package)) {
+            return $this->sendError('Please note that our 14-day trial is a one-time offer, and additional trials are not available once the initial trial period has been utilized');
+        }
+        
 
         $package = Package::where('id', $package_id)->first();
         $package_days = $package->expirydays;
@@ -192,8 +233,12 @@ class AdvertiserController extends BaseController
                 'package_id' => $package_id,
                 'expired_at' => $expired_at
             ]);    
-            
-            return $this->sendResponse($userPackage, 'This package has been purchased successfully.'); 
+            if($package_id == '1') {
+                $message = 'Thank you for choosing the free trial package subscription! Please check your email for further instructions and details regarding your subscription.';
+            } else {
+                $message = 'Thank you for choosing '.$package->title.' package! Please check your email for further instructions and details regarding your subscription.';
+            }
+            return $this->sendResponse($userPackage, $message); 
 
         }
 
@@ -201,7 +246,41 @@ class AdvertiserController extends BaseController
     }
 
    
+    // public function logout(Request $request): LogoutResponse
+    // {
+    //     $this->guard->logout();
 
-      
-    
+    //     $request->session()->invalidate();
+
+    //     $request->session()->regenerateToken();
+
+    //     return app(LogoutResponse::class);
+    // }
+
+   
+    public function switch_profile(Request $request) {
+
+        $data = [
+            'currenct_role' => $request->currenct_role,
+            'switchto_role' => $request->switchto_role, 
+        ];
+
+        
+        return $this->sendResponse($data, 'Switch Profile'); 
+    }
+
+
+
+    public function edit(User $user) 
+    {
+        $data = [
+            'user' => $user,
+            'userRole' => $user->roles->pluck('name')->toArray(),
+            'roles' => Role::latest()->get()
+        ];
+
+        return $this->sendResponse($data, 'User Roles'); 
+
+    }
+
 }

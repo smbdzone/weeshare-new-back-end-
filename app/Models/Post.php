@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Permission\Models\Role;
 
 class Post extends Model
 {
@@ -21,7 +22,9 @@ class Post extends Model
         'gender',	
         'age',	
         'schedule_at',	
-        'status'
+        'status',
+        'media_status',
+        'customize_status'
     ];
 
     public function posts_contents(){

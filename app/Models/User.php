@@ -3,15 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;   
+use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens; 
+  
 
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
 
     /**
      * The attributes that are mass assignable.
@@ -19,6 +23,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+       
         'user_type',
         'name',
         'email',
@@ -56,6 +61,11 @@ class User extends Authenticatable
 
     public function user_posts(){
         return $this->hasMany(Post::class,'user_id');
+    }
+
+    public function currentRole(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'current_role_id');
     }
 
 }

@@ -23,7 +23,7 @@ class PackageController extends BaseController
 
         // return $this->sendResponse('I m here', 'userID');
 
-        $packages = Package::all();
+        $packages = Package::where('status', '1')->with('features')->get();
         return $this->sendResponse($packages, 'Packages retrieved successfully.');
         // return $this->sendResponse(PackageResource::collection($packages), 'Packages retrieved successfully.');
 

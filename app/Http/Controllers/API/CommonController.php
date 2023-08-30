@@ -20,7 +20,6 @@ use App\Models\SocialMediaType;
 class CommonController extends BaseController 
 { 
     
-
     public function countries(){
         $countries = Country::all();
         return $this->sendResponse($countries, 'Countries list');

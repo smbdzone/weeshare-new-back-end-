@@ -26,6 +26,8 @@ use Illuminate\Support\Str;
 use PHPMailer\PHPMailer\PHPMailer; 
 use PHPMailer\PHPMailer\Exception;
 
+use Mail;
+// use App\Mail\LaraEmail;
 
 class RegisterController extends BaseController
 
@@ -49,7 +51,7 @@ class RegisterController extends BaseController
 
             'user_type' => 'required',
             'name' => 'required', 
-            'email' => 'required|email', 
+            'email' => 'required|email|unique:users', 
             'password' => [
                 'required',
                 Password::min(8)
@@ -119,41 +121,57 @@ class RegisterController extends BaseController
 
             $body = str_replace($search, $replace, $tempbody);
 
-            require 'PHPMailer/vendor/autoload.php';
 
-            //Create an instance; passing `true` enables exceptions
-            $mail = new PHPMailer(true);
-    
-    
+            $mailData = [
+                'subject' => $subject,
+                'emailAddress' => $user->email,
+                'body' => $body,
+                'verification_link' => $verificationLink,
+            ];
+
             try {
-
-                $mail->SMTPDebug = 0;                      //Enable verbose debug output
-                $mail->isSMTP();                                            //Send using SMTP
-                $mail->Host       = $email_config->smtp_host;
-                //Set the SMTP server to send through
-                $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
-                $mail->Username   = $email_config->smtp_username;
-                //SMTP username
-                $mail->Password   = $email_config->smtp_password;                           //SMTP password
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
-
-                $mail->Port       = $email_config->smtp_port;                                     //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
-                //Recipients
-                $mail->setFrom($email_config->from_address, $email_config->from_name);
-                $mail->addAddress($user->email);
-    
-    
-                //Content
-                $mail->isHTML(true);                                  //Set email format to HTML
-                $mail->Subject = $subject;
-                $mail->Body = $body; 
-                $mail->send();
-
-                return $this->sendResponse($success, 'Thank you for registration, Please verify your email to continue.');
-                
+                Mail::send('emails.register', $mailData, function($messages) use ($user){
+                    $messages->to($user->email);
+                    $messages->subject('WeeShare Successful Registration');
+                });
+                // Mail::to($user->email)->send(new LaraEmail($mailData));
+                return $this->sendResponse($success, 'User register successfully.');
             } catch (Exception $e) { 
-                return $this->sendError("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+                return $this->sendError("Message could not be sent.");
             }
+     
+            // require 'PHPMailer/vendor/autoload.php';
+            // //Create an instance; passing `true` enables exceptions
+            // $mail = new PHPMailer(true);
+            // try {
+
+            //     $mail->SMTPDebug = 0;                      //Enable verbose debug output
+            //     $mail->isSMTP();                                            //Send using SMTP
+            //     $mail->Host       = $email_config->smtp_host;
+            //     //Set the SMTP server to send through
+            //     $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
+            //     $mail->Username   = $email_config->smtp_username;
+            //     //SMTP username
+            //     $mail->Password   = $email_config->smtp_password;                           //SMTP password
+            //     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+
+            //     $mail->Port       = $email_config->smtp_port;                                     //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+            //     //Recipients
+            //     $mail->setFrom($email_config->from_address, $email_config->from_name);
+            //     $mail->addAddress($user->email);
+    
+    
+            //     //Content
+            //     $mail->isHTML(true);                                  //Set email format to HTML
+            //     $mail->Subject = $subject;
+            //     $mail->Body = $body; 
+            //     $mail->send();
+
+            //     return $this->sendResponse($success, 'Thank you for registration, Please verify your email to continue.');
+                
+            // } catch (Exception $e) { 
+            //     return $this->sendError("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+            // }
     
 
             // return $this->sendResponse($success, 'User register successfully.');
@@ -185,6 +203,7 @@ class RegisterController extends BaseController
         $validator = Validator::make($request->all(), [
 
             'user_type' => 'required', 
+            // 'current_role_id' => 'required', 
             'email' => 'required|email', 
             'password' => [
                 'required',
@@ -205,11 +224,18 @@ class RegisterController extends BaseController
         }
 
 
-        if(Auth::attempt(['email' => $request->email, 'password' => $request->password, 'status' => '1'])){ 
+        if(Auth::attempt(
+            ['email' => $request->email, 
+            'password' => $request->password, 
+            'user_type' => $request->user_type, 
+            'status' => '1', 
+            // 'current_role_id' => $request->current_role_id
+            ]
+            )){ 
 
             $user = Auth::user(); 
-
-            $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
+            $success['session'] = $request->session()->regenerate();
+            // $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
             $success['user_type'] =  $user->user_type; 
             $success['name'] =  $user->name;  
             $success['email'] =  $user->email; 
@@ -355,50 +381,65 @@ class RegisterController extends BaseController
                 $tempbody =  $email_content->body;
                 //dd($body);
 
-                $loginLink = url('login');
+                $mailData = [
+                    'login_link' => url('login')
+                ];
+                // $loginLink = url('login');
 
-                $search = array('{UserName}', '{LoginLink}');
-                $replace = array($profileName, $loginLink);
-
-                $body = str_replace($search, $replace, $tempbody);
-                
-                //dd($userVerificationEmailTempInfo_msg);
-                //Load Composer's autoloader
-                require 'PHPMailer/vendor/autoload.php';
-
-                //Create an instance; passing `true` enables exceptions
-                $mail = new PHPMailer(true);
                 try {
-                    //Server settings
-                    $mail->SMTPDebug = 0;                      //Enable verbose debug output
-                    $mail->isSMTP();                                            //Send using SMTP
-                    $mail->Host       = $email_config->smtp_host;
-                    //Set the SMTP server to send through
-                    $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
-                    $mail->Username   = $email_config->smtp_username;
-                    //SMTP username
-                    $mail->Password   = $email_config->smtp_password;                           //SMTP password
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
-                    $mail->Port       = $email_config->smtp_port;                              //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
-
-                    //Recipients
-                    $mail->setFrom($email_config->from_address, $email_config->from_name);
-                    $mail->addAddress($primaryEmailAddress);
-
-                    //Content
-                    $mail->isHTML(true);                                  //Set email format to HTML
-                    $mail->Subject =  $subject;
-                    $mail->Body =   $body;
-
-                    //dd('success');
-                    $send = $mail->send();
-
-
-                    return $this->sendResponse($success, 'Thank you, your email has been verified.');
-                
+                    Mail::send('emails.verification', $mailData, function($messages) use ($profile){
+                        $messages->to($profile->email);
+                        $messages->subject('WeeShare Successful Email Verification');
+                    });
+                    // Mail::to($user->email)->send(new LaraEmail($mailData));
+                    return $this->sendResponse($success, 'User verified successfully.');
                 } catch (Exception $e) { 
-                    return $this->sendError("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+                    return $this->sendError("Message could not be sent.");
                 }
+
+                
+                // $search = array('{UserName}', '{LoginLink}');
+                // $replace = array($profileName, $loginLink);
+
+                // $body = str_replace($search, $replace, $tempbody);
+                
+                // //dd($userVerificationEmailTempInfo_msg);
+                // //Load Composer's autoloader
+                // require 'PHPMailer/vendor/autoload.php';
+
+                // //Create an instance; passing `true` enables exceptions
+                // $mail = new PHPMailer(true);
+                // try {
+                //     //Server settings
+                //     $mail->SMTPDebug = 0;                      //Enable verbose debug output
+                //     $mail->isSMTP();                                            //Send using SMTP
+                //     $mail->Host       = $email_config->smtp_host;
+                //     //Set the SMTP server to send through
+                //     $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
+                //     $mail->Username   = $email_config->smtp_username;
+                //     //SMTP username
+                //     $mail->Password   = $email_config->smtp_password;                           //SMTP password
+                //     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
+                //     $mail->Port       = $email_config->smtp_port;                              //TCP port to connect to; use 587 if you have set `SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS`
+
+                //     //Recipients
+                //     $mail->setFrom($email_config->from_address, $email_config->from_name);
+                //     $mail->addAddress($primaryEmailAddress);
+
+                //     //Content
+                //     $mail->isHTML(true);                                  //Set email format to HTML
+                //     $mail->Subject =  $subject;
+                //     $mail->Body =   $body;
+
+                //     //dd('success');
+                //     $send = $mail->send();
+
+
+                //     return $this->sendResponse($success, 'Thank you, your email has been verified.');
+                
+                // } catch (Exception $e) { 
+                //     return $this->sendError("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+                // }
         
 
             }
@@ -409,7 +450,19 @@ class RegisterController extends BaseController
 
     }
 
+    public function logout(Request $request) {
+        // Auth::user()->tokens()->delete();
 
+        Auth::guard('web')->logout();
+        
+        Auth::logout();
+ 
+        $request->session()->invalidate();
+
+        $request->session()->regenerateToken();
+
+        return $this->sendResponse('logout', 'You are logged out.'); 
+    }
 
     // public function countries(){
     //     $countries = Country::all();
