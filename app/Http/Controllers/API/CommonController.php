@@ -21,6 +21,7 @@ class CommonController extends BaseController
 { 
     
     public function countries(){
+        // $countries = Country::with('states')->with('cities')->get();
         $countries = Country::all();
         return $this->sendResponse($countries, 'Countries list');
     }

@@ -13,4 +13,12 @@ class Country extends Model
        'name', 
     ];
 
+    // public function states(){
+    //     return $this->hasMany(State::class,'country_id');
+    // }
+    
+    // public function cities(){
+    //     return $this->hasMany(City::class,'state_id');
+    // }
+
 }
