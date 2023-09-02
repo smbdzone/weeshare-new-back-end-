@@ -12,6 +12,7 @@ use Spatie\Permission\Models\Role;
 use Validator;
 use App\Http\Resources\PackageResource;
 use Carbon\Carbon;
+ 
 
 class AdvertiserController extends BaseController
 {
@@ -68,10 +69,10 @@ class AdvertiserController extends BaseController
 
         // return $this->sendError($extension, 'only these extensions are allowed.'); 
 
-        $extension_array = array('jpg', 'jpeg', 'png');
+        $extension_array = array('jpg', 'jpeg', 'png', 'webp');
 
         if (!in_array($extension, $extension_array)) {
-            return $this->sendError('jpg, jpeg, png', 'only these extensions are allowed.'); 
+            return $this->sendError('jpg, jpeg, png, webp', 'only these extensions are allowed.'); 
         }
  
 
@@ -85,14 +86,16 @@ class AdvertiserController extends BaseController
 
             $filename = rand() . '_' . $request->file('profile_picture')->getClientOriginalName();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
-
+            // $profile_picture_url = url('storage/profiles/'.$filename);
+            $profile_picture_url = 'https://weeshare.smbdigitalzone.online/storage/app/public/profiles/'. $filename;
             $user->update([
                 'profile_picture' => $filename,
+                'profile_picture_url' => $profile_picture_url,
             ]);
         } 
 
         // $data = array('user' => $user);
-        return $this->sendResponse($user, 'Advertiser Profile'); 
+        return $this->sendResponse($profile_picture_url, 'Profile Image URL'); 
     }
 
     //View Profile
@@ -118,7 +121,14 @@ class AdvertiserController extends BaseController
             return $this->sendError('Profile not found.');
         }  
 
-        $data = array('user' => $user);
+        $user = User::find($getuser->id);
+        $roles = Role::pluck('name','name')->all();
+        $userRole = $user->roles->pluck('name','name')->all();
+    
+        // return view('users.edit',compact('user','roles','userRole'));
+
+
+        $data = array('user' => $user, 'roles' => $roles, 'userRole' => $userRole );
         return $this->sendResponse($data, 'Advertiser Profile'); 
     }
 

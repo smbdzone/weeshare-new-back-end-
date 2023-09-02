@@ -10,6 +10,9 @@ use App\Http\Controllers\API\RegisterController;
 use App\Http\Controllers\API\AdvertiserController;
 use App\Http\Controllers\API\PostController;
 use App\Http\Controllers\API\CommonController;
+use App\Http\Controllers\API\RolesController;
+use App\Http\Controllers\API\PermissionsController;
+use App\Http\Controllers\API\SwitchRoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +68,8 @@ use App\Http\Controllers\API\CommonController;
         return $request->user();
     });
 
+    Route::get('switch-role/{role}', SwitchRoleController::class);
+    
     // Route::middleware(['auth', 'auth.session'])->group(function () {
     //     Route::get('/', function () {
     //         // ...
@@ -72,8 +77,8 @@ use App\Http\Controllers\API\CommonController;
     // });
 
     //  'auth.session'
-    
-    Route::group(['middleware' => ['auth:sanctum', 'permission']], function() {
+    //  'permission'
+    Route::group(['middleware' => ['auth:sanctum']], function() {
 
         // Route::middleware('auth:sanctum',)->group( function () { 
  
@@ -112,6 +117,13 @@ use App\Http\Controllers\API\CommonController;
         
         Route::resource('roles', RolesController::class);
         Route::resource('permissions', PermissionsController::class);
+
+        // Route::controller(RolesController::class)->group(function(){
+        //     Route::get('index', 'index');   
+        // });
+
+        
+        
 
         // Route::controller()
     });

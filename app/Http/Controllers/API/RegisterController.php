@@ -13,6 +13,7 @@ use App\Models\VerifyUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Role;
 
 use App\Http\Controllers\API\BaseController as BaseController;
 
@@ -44,7 +45,6 @@ class RegisterController extends BaseController
      */
 
     public function register(Request $request)
-
     {
 
         $validator = Validator::make($request->all(), [
@@ -79,7 +79,14 @@ class RegisterController extends BaseController
 
         $input['password'] = bcrypt($input['password']);
 
-        $user = User::create($input);
+        $user = User::create(
+            [
+                'current_role_id' => $request->user_type,
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => $request->password,  
+            ]
+        );
 
         $user_id = $user->id;
 
@@ -87,6 +94,12 @@ class RegisterController extends BaseController
         if($user_id) {
             // $success['token'] =  $user->createToken('MyApp')->plainTextToken;
  
+            $roles = [
+                $request->user_type
+            ];
+
+            $user->assignRole($roles);
+
             $success['user_type'] =  $user->user_type; 
             $success['name'] =  $user->name;  
             $success['email'] =  $user->email; 
@@ -235,7 +248,7 @@ class RegisterController extends BaseController
 
             $user = Auth::user(); 
             $success['session'] = $request->session()->regenerate();
-            // $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
+            $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
             $success['user_type'] =  $user->user_type; 
             $success['name'] =  $user->name;  
             $success['email'] =  $user->email; 

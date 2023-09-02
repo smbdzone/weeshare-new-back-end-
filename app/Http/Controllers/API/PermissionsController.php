@@ -1,12 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
-
+namespace App\Http\Controllers\API;
+use App\Http\Controllers\API\BaseController as BaseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
 use Spatie\Permission\Models\Permission;
 
-class PermissionsController extends Controller
+use Validator;
+
+class PermissionsController extends BaseController
 {
     /**
      * Display a listing of the resource.
@@ -45,15 +48,21 @@ class PermissionsController extends Controller
      */
     public function store(Request $request)
     {   
-        $request->validate([
-            'name' => 'required|unique:users,name'
+        $input = $request->all();
+
+        $validator = Validator::make($input, [ 
+            'name' => 'required|unique:permissions,name'  
         ]);
-
-        $permission = Permission::create($request->only('name'));
-
-        return $this->sendResponse($permission, 'Permission created successfully.'); 
-
-
+ 
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());       
+        } else {
+            $permission = Permission::create($request->only('name')); 
+            return $this->sendResponse($permission, 'Permission created successfully.');
+        }
+        
+         
+        
         // return redirect()->route('permissions.index')
         //     ->withSuccess(__('Permission created successfully.'));
     }
@@ -64,14 +73,33 @@ class PermissionsController extends Controller
      * @param  Permission  $post
      * @return \Illuminate\Http\Response
      */
-    public function edit(Permission $permission)
+    public function edit($id)
     {
+
+
+        $permission = Permission::find($id);
+        // $permission = $permission->update(['name' => $request->name]); 
         return $this->sendResponse($permission, 'Permission Details'); 
 
         // return view('permissions.edit', [
         //     'permission' => $permission
         // ]);
     }
+
+
+    public function show($id)
+    {
+
+
+        $permission = Permission::find($id);
+        // $permission = $permission->update(['name' => $request->name]); 
+        return $this->sendResponse($permission, 'Permission Details'); 
+
+        // return view('permissions.edit', [
+        //     'permission' => $permission
+        // ]);
+    }
+
 
     /**
      * Update the specified resource in storage.
@@ -80,15 +108,33 @@ class PermissionsController extends Controller
      * @param  Permission  $permission
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Permission $permission)
+    public function update(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|unique:permissions,name,'.$permission->id
+
+
+        $input = $request->all();
+
+        $validator = Validator::make($input, [ 
+            'name' => 'required|unique:permissions,name,'.$id
         ]);
+ 
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());       
+        } else {
+            $permission = Permission::find($id);
+            $permission = $permission->update(['name' => $request->name]); 
+            return $this->sendResponse($permission, 'Permission updated successfully.');
+        }
 
-        $permission->update($request->only('name'));
 
-        return $this->sendResponse($permission, 'Permission updated successfully.'); 
+
+        // $request->validate([
+        //     'name' => 'required|unique:permissions,name,'.$id
+        // ]);
+
+        // $permission->update($request->only('name'));
+
+        // return $this->sendResponse($permission, 'Permission updated successfully.'); 
 
         // return redirect()->route('permissions.index')
         //     ->withSuccess(__('Permission updated successfully.'));
@@ -100,11 +146,12 @@ class PermissionsController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Permission $permission)
+    public function destroy($id)
     {
+        $permission = Permission::find($id);
         $permission->delete();
 
-        return $this->sendResponse($permission, 'Permission deleted successfully.'); 
+        return $this->sendResponse($id, 'Permission deleted successfully.'); 
 
         // return redirect()->route('permissions.index')
         //     ->withSuccess(__('Permission deleted successfully.'));
