@@ -35,6 +35,7 @@ class User extends Authenticatable
         'city_id',
         'address',
         'postcode', 
+        'twofa_status', 
         'status',
         'profile_picture',
         'profile_picture_url'

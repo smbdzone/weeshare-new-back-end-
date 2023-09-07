@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\API\ContentPageController;
+use App\Http\Controllers\API\FaqController;
 use App\Http\Controllers\API\PackageController;
 use App\Http\Controllers\API\SurveyController;
 use App\Models\UserPackage;
@@ -13,6 +15,7 @@ use App\Http\Controllers\API\CommonController;
 use App\Http\Controllers\API\RolesController;
 use App\Http\Controllers\API\PermissionsController;
 use App\Http\Controllers\API\SwitchRoleController;
+use App\Http\Controllers\API\TwofaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,29 +41,35 @@ use App\Http\Controllers\API\SwitchRoleController;
     //     return response()->json(['token' => $token, 'token_session' => $token_session ]); 
       
     // });
-
-    Route::group(['middleware' => ['guest']], function() {
-
-        Route::controller(RegisterController::class)->group(function(){  
-            Route::post('register', 'register');
-            Route::post('login', 'login');  
-            Route::post('logout', 'logout');  
-            Route::get('verify-user/{token}',  'verify_user');
-            Route::post('forgot-password', 'forgot_password'); 
-        });
-        
-    });
+ 
 
  
+    Route::controller(FaqController::class)->group(function(){
+        Route::get('faq-advertiser', 'advertiser_faq'); 
+        Route::get('faq-publisher', 'publisher_faq');
+        Route::get('faq-survey', 'survey_faq');    
+    });
+
+    Route::controller(ContentPageController::class)->group(function(){
+        Route::get('pages', 'pages'); 
+        Route::get('page-content/{slug}', 'page_content');   
+    });
 
     Route::controller(CommonController::class)->group(function(){
         Route::get('send-email', 'sendemail'); 
         Route::get('industries', 'industries');
         Route::get('countries', 'countries'); 
         Route::get('cities/{country_id}/{state_id}', 'cities'); 
-        Route::get('states/{country_id}', 'states');  
+        Route::get('states/{country_id}', 'states');   
     });
 
+    Route::controller(RegisterController::class)->group(function(){  
+        Route::post('register', 'register');
+        Route::post('login', 'login');  
+        Route::post('logout', 'logout');  
+        Route::get('verify-user/{token}',  'verify_user');
+        Route::post('forgot-password', 'forgot_password'); 
+    });
     
 
     //check if login or not
@@ -68,7 +77,7 @@ use App\Http\Controllers\API\SwitchRoleController;
         return $request->user();
     });
 
-    Route::get('switch-role/{role}', SwitchRoleController::class);
+    // Route::get('switch-role/{role}', SwitchRoleController::class);
     
     // Route::middleware(['auth', 'auth.session'])->group(function () {
     //     Route::get('/', function () {
@@ -81,7 +90,7 @@ use App\Http\Controllers\API\SwitchRoleController;
     Route::group(['middleware' => ['auth:sanctum']], function() {
 
         // Route::middleware('auth:sanctum',)->group( function () { 
- 
+  
         Route::controller(PostController::class)->group(function(){
             Route::get('posts', 'index');
             Route::post('post', 'store');
@@ -122,7 +131,9 @@ use App\Http\Controllers\API\SwitchRoleController;
         //     Route::get('index', 'index');   
         // });
 
-        
+        Route::controller(TwofaController::class)->group(function(){
+            Route::post('twofa-status', 'twofa_status');   
+        });
         
 
         // Route::controller()

@@ -21,10 +21,10 @@ class PostController extends BaseController
      */
     function __construct()
     {
-         $this->middleware('permission:post-list|post-create|post-edit|post-delete', ['only' => ['index','show']]);
-         $this->middleware('permission:post-create', ['only' => ['create','store']]);
-         $this->middleware('permission:post-edit', ['only' => ['edit','update']]);
-         $this->middleware('permission:post-delete', ['only' => ['destroy']]);
+        //  $this->middleware('permission:post-list|post-create|post-edit|post-delete', ['only' => ['index','show']]);
+        //  $this->middleware('permission:post-create', ['only' => ['create','store']]);
+        //  $this->middleware('permission:post-edit', ['only' => ['edit','update']]);
+        //  $this->middleware('permission:post-delete', ['only' => ['destroy']]);
     }
 
 
@@ -84,16 +84,17 @@ class PostController extends BaseController
         $user = $request->user(); 
         // echo '<pre>';
         // print_r($request->file('photos'));
+        // print_r($request->file('photos[]'));
 
         
         // dd($request->hasFile('photos'));
-        // return $this->sendResponse($request->file('photos'), 'File extensions checks');
+        // return $this->sendResponse($input, 'input returned');
 
         $validator = Validator::make($input, [ 
             'social_id' => 'required', 
             'post_type_id' => 'required', 
             'post_heading' => 'required',  
-            'schedule_at' => 'required', 
+            // 'schedule_at' => 'required', 
             'country' => 'required',  
             'state' => 'required', 
             'city' => 'required', 
@@ -124,11 +125,11 @@ class PostController extends BaseController
 
         $post = Post::create([
             'user_id' =>  $user->id,  
-            'country_id' => $input['country'], 
-            'state_id' => $input['state'], 
-            'city_id' => $input['city'], 
+            'countries' => json_encode($input['country']), 
+            'states' => json_encode($input['state']), 
+            'cities' => json_encode($input['city']), 
             'gender' => $input['gender'], 
-            'age' => $input['age'],  
+            'age' => json_encode($input['age']),  
             'schedule_at' => $input['schedule_at'],
             'status' => 1,
             'media_status' => $media_status,
@@ -151,125 +152,71 @@ class PostController extends BaseController
         $images_mixed = false;
         $videos_mixed = false;
         $errors = array();
-        for ($i=0; $i < count($social_id); $i++) {    
+        $array_return = array();
+        $array_return['file_urls'] = array();
+
+        if($request->hasFile('photos'))
+        {
+
+
+            // $instagram_extensions = ['jpg','jpeg','png', 'BMP', 'webp', 'MP4', 'MOV' ]; //GIF 
+            // $facebook_extensions = ['jpg','jpeg','png', 'webp', 'wmv', 'vob', 'ts', 'tod', 'qt', 'ogv', 'ogm', 'nsv', 'mts', 'mpg', 'mpeg4', 'mpeg', 'mpe', 'mp4', 'mov', 'mod', 'mkv', 'm4v', 'm2ts', 'gif', 'flv', 'f4v', 'dv', 'divx', 'dat', 'avi', 'asf', '3gpp', '3gp',  '3g2'];
+            // $tiktok_extensions = ['MP4', 'MPEG', 'MOV', 'AVI'];
+            
+            // $files_array = array('1.jpg');
+            // $allowedfileExtension=['jpg','jpeg','png', 'webp']; 
+
+            $files = $request->file('photos'); 
+             
+
+            // $images_extensions = ['jpg','jpeg','png', 'webp'];
+            // $videos_extensions = ['wmv', 'vob', 'ts', 'tod', 'qt', 'ogv', 'ogm', 'nsv', 'mts', 'mpg', 'mpeg4', 'mpeg', 'mpe', 'mp4', 'mov', 'mod', 'mkv', 'm4v', 'm2ts', 'gif', 'flv', 'f4v', 'dv', 'divx', 'dat', 'avi', 'asf', '3gpp', '3gp',  '3g2'];
+
+            $checks = array();
+            $checks['fb'] = array();
+            $checks['insta'] = array();
+            $checks['tiktok'] = array();
+
+            $file_urls = array();
+            foreach($files as $file){
+                // $file->getClientDimentions();
+                $filename = $file->getClientOriginalName(); 
+                $extension = $file->getClientOriginalExtension(); 
+
+
+                $file->storeAs('media', $filename, 'public');  
+                $file_url = url('storage/app/public/media/'.$filename);
+ 
+                PostsMedia::create([
+                    'user_id' => $request->user()->id,
+                    'post_id' => $post_id,	
+                    // 'post_content_id' => $social_id[$i],
+                    'post_content_id' => '1',	
+                    'file_type' => $extension,	
+                    'file_name' => $filename,	
+                    'file_url' => $file_url,	 
+                ]);
+
+                array_push($file_urls, $file_url);
+  
+            }
+   
+
+        }
+
+
+        array_push($array_return['file_urls'], $file_urls);
+
+        return $this->sendResponse($array_return, 'File extensions checks');
+
+        // for ($i=0; $i < count($social_id); $i++) {    
            
 
             // echo '<br>i = '. $i; // 0,1,2
             // echo 'social_id = '. $social_id[$i]; // 1,2,3
             // check for facebook
             
-            if($request->hasFile('photos'))
-            {
-    
-    
-                $instagram_extensions = ['jpg','jpeg','png', 'BMP', 'webp', 'MP4', 'MOV' ]; //GIF
-                
-                $facebook_extensions = ['jpg','jpeg','png', 'webp', 'wmv', 'vob', 'ts', 'tod', 'qt', 'ogv', 'ogm', 'nsv', 'mts', 'mpg', 'mpeg4', 'mpeg', 'mpe', 'mp4', 'mov', 'mod', 'mkv', 'm4v', 'm2ts', 'gif', 'flv', 'f4v', 'dv', 'divx', 'dat', 'avi', 'asf', '3gpp', '3gp',  '3g2'];
-                $tiktok_extensions = ['MP4', 'MPEG', 'MOV', 'AVI'];
-                
-                // $files_array = array('1.jpg');
-                $allowedfileExtension=['jpg','jpeg','png', 'webp']; 
-    
-                $files = $request->files('photos'); 
-                
-                // var_dump($files);
-
-                // exit;
-                
-                // var_dump(array_filter($files, function($v, $k) {
-                //     return $k == 'b' || $v == 4;
-                // }, ARRAY_FILTER_USE_BOTH));
-
-
-
-                $images_extensions = ['jpg','jpeg','png', 'webp'];
-                $videos_extensions = ['wmv', 'vob', 'ts', 'tod', 'qt', 'ogv', 'ogm', 'nsv', 'mts', 'mpg', 'mpeg4', 'mpeg', 'mpe', 'mp4', 'mov', 'mod', 'mkv', 'm4v', 'm2ts', 'gif', 'flv', 'f4v', 'dv', 'divx', 'dat', 'avi', 'asf', '3gpp', '3gp',  '3g2'];
-
-                $checks = array();
-                $checks['fb'] = array();
-                $checks['insta'] = array();
-                $checks['tiktok'] = array();
-
-                
-                foreach($files as $file){
-                    // $file->getClientDimentions();
-                    $filename = $file->getClientOriginalName(); 
-                    $extension = $file->getClientOriginalExtension();
-    
-                    // if post has images and videos mixed..
-                    if(in_array($extension, $images_extensions)) {
-                        $images_mixed = true;
-                        array_push($errors, 'image');
-                    } else {
-                        $images_mixed = false;
-                    }
-
-                    if(in_array($extension, $videos_extensions)) {
-                        $videos_mixed = true;
-                        array_push($errors, 'video');
-                    } else {
-                        $videos_mixed = false;
-                    }
-                }
-
-
-                    
-
-                    //fb check
-                    // if($social_id[$i] == '1') {
-                    //     $fb_check=in_array($extension,$facebook_extensions);
-                    //     array_push($checks['fb'], $fb_check);
-                    // } 
-                    // // insta check
-                    // if($social_id[$i] == '2') {
-                    //     $insta_check=in_array($extension,$instagram_extensions);
-                    //     array_push($checks['insta'], $insta_check);
-                    // }
-                    // // tiktok check
-                    // if($social_id[$i] == '3') {
-                    //     $tiktok_check=in_array($extension,$tiktok_extensions);
-                    //     array_push($checks['tiktok'], $tiktok_check);
-                    // }
-                    
-
-                   
-
-
-                    //dd($check);
-                    // if($check)
-                    // { 
-    
-    
-    
-                    //     $file->storeAs('media', $filename, 'public');
-                    //     // $filename = $photo->store('photos');
-    
-                    //     for ($i=0; $i < count($social_id); $i++) {    
-    
-                    //         PostsMedia::create([
-                    //             'user_id' => $request->user()->id,
-                    //             'post_id' => $post_id,	
-                    //             'post_content_id' => $social_id[$i],	
-                    //             'file_type' => $extension,	
-                    //             'file_name' => $filename,	
-                    //             'file_url' => $filename,	 
-                    //         ]);
-    
-                    //     }
-                    //     // array_push($files_array, $filename); 
-                    // }
-                    // else
-                    // {
-                    //     return $this->sendError('Warning!  Sorry Only Upload png, jpg, jpeg, webp'); 
-                    //     // echo '<div class="alert alert-warning"><strong>Warning!</strong> Sorry Only Upload png , jpg , doc</div>';
-                    // }
-    
             
-
-                // return $this->sendResponse($checks, 'File extensions checks');
-
-            }
-    
            
            
            
@@ -284,18 +231,18 @@ class PostController extends BaseController
 
            
 
-        }
+        // }
         
-        if(in_array(['image', 'video'], $errors)) {
-            return $this->sendError('Images and videos cannot be mixed.'); 
-        }
+        // if(in_array(['image', 'video'], $errors)) {
+        //     return $this->sendError('Images and videos cannot be mixed.'); 
+        // }
         
         
         // $files_array = array();
         
         
    
-        return $this->sendResponse('Post', 'Post created successfully.');
+        // return $this->sendResponse('Post', 'Post created successfully.');
 
     } 
    

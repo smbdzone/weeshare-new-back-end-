@@ -237,6 +237,48 @@ class RegisterController extends BaseController
         }
 
 
+        // $check_user = User::where('email', $request->email)
+        // // ->where('password', bcrypt($request->password))
+        // ->where('status', '1')->where('twofa_status', '1') 
+        // ->exists();
+
+        // // return $this->sendResponse($check_user, 'Pin Code sent successfully.');
+
+        // if($check_user) {
+
+        //     $email_content = EmailTemplate::where('type','=', '2fa_enabled')->first();
+        //     $subject =  $email_content->subject;
+        //     $tempbody =  $email_content->body;
+
+        //     $userName = $check_user->name;
+        //     $twofaCode = random_int(100000, 999999); 
+
+        //     $search = array('{UserName}', '{twofaCode}');
+        //     $replace = array($userName, $twofaCode);
+ 
+
+        //     $body = str_replace($search, $replace, $tempbody);
+
+
+        //     $mailData = [
+        //         'subject' => $subject,
+        //         'emailAddress' => $check_user->email,
+        //         'body' => $body,
+        //         'twofaCode' => $twofaCode,
+        //     ];
+
+        //     try {
+        //         Mail::send('emails.twofa', $mailData, function($messages) use ($check_user){
+        //             $messages->to($check_user->email);
+        //             $messages->subject('PIN CODE');
+        //         });
+        //         // Mail::to($user->email)->send(new LaraEmail($mailData));
+        //         return $this->sendResponse('pincode', 'Pin Code sent successfully.');
+        //     } catch (Exception $e) { 
+        //         return $this->sendError("Message could not be sent.");
+        //     }
+        // }
+        
         if(Auth::attempt(
             ['email' => $request->email, 
             'password' => $request->password, 
@@ -246,21 +288,21 @@ class RegisterController extends BaseController
             ]
             )){ 
 
-            $user = Auth::user(); 
-            $success['session'] = $request->session()->regenerate();
-            $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
-            $success['user_type'] =  $user->user_type; 
-            $success['name'] =  $user->name;  
-            $success['email'] =  $user->email; 
-            $success['email_verified_at'] =  $user->email_verified_at; 
-            $success['phone_no'] =  $user->phone_no; 
-            $success['biography'] =  $user->biography; 
-            $success['country_id'] =  $user->country_id; 
-            $success['state_id'] =  $user->state_id; 
-            $success['city_id'] =  $user->city_id; 
-            $success['address'] =  $user->address; 
-            $success['postcode'] =  $user->postcode; 
-            $success['profile_picture'] =  $user->profile_picture;  
+                $user = Auth::user(); 
+                $success['session'] = $request->session()->regenerate();
+                $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
+                $success['user_type'] =  $user->user_type; 
+                $success['name'] =  $user->name;  
+                $success['email'] =  $user->email; 
+                $success['email_verified_at'] =  $user->email_verified_at; 
+                $success['phone_no'] =  $user->phone_no; 
+                $success['biography'] =  $user->biography; 
+                $success['country_id'] =  $user->country_id; 
+                $success['state_id'] =  $user->state_id; 
+                $success['city_id'] =  $user->city_id; 
+                $success['address'] =  $user->address; 
+                $success['postcode'] =  $user->postcode; 
+                $success['profile_picture'] =  $user->profile_picture;  
 
             return $this->sendResponse($success, 'User login successfully.');
 
@@ -272,6 +314,7 @@ class RegisterController extends BaseController
 
         } 
 
+        
     }
 
 
