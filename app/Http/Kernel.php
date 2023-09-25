@@ -66,6 +66,8 @@ class Kernel extends HttpKernel
             'role' => \Spatie\Permission\Middlewares\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
+
+            '2fa' => \PragmaRX\Google2FALaravel\Middleware::class,
     ];
 
     /**
@@ -96,5 +98,7 @@ class Kernel extends HttpKernel
         'permission' => \App\Http\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
         
+        'isPublisher' => \App\Http\Middleware\isPublisher::class,
+        'isAdvertiser' => \App\Http\Middleware\isAdvertiser::class,
     ];
 }

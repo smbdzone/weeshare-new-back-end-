@@ -87,7 +87,7 @@ class AdvertiserController extends BaseController
             $filename = rand() . '_' . $request->file('profile_picture')->getClientOriginalName();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
             // $profile_picture_url = url('storage/profiles/'.$filename);
-            $profile_picture_url = 'https://weeshare.smbdigitalzone.online/storage/app/public/profiles/'. $filename;
+            $profile_picture_url = asset('storage/profiles/'. $filename);
             $user->update([
                 'profile_picture' => $filename,
                 'profile_picture_url' => $profile_picture_url,
@@ -227,12 +227,13 @@ class AdvertiserController extends BaseController
         // return $this->sendResponse($check_package, 'Check user package'); 
        
 
-        if(!is_null($check_package)) {
+        if(!is_null($check_package) && $package_id == '1') {
             return $this->sendError('Please note that our 14-day trial is a one-time offer, and additional trials are not available once the initial trial period has been utilized');
         }
+
         
 
-        $package = Package::where('id', $package_id)->first();
+        $package = Package::where('id', $package_id)->where('status', '1')->first();
         $package_days = $package->expirydays;
         $expired_at = Carbon::now()->addDays($package_days);
 
@@ -292,5 +293,9 @@ class AdvertiserController extends BaseController
         return $this->sendResponse($data, 'User Roles'); 
 
     }
+
+
+
+   
 
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Models\Survey;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyQuestion;
+use App\Models\SurveyResult;
 use Illuminate\Http\Request;
 use App\Http\Controllers\API\BaseController as BaseController; 
 use Validator; 
@@ -20,31 +21,8 @@ class SurveyController extends BaseController
      */
     public function index(Request $request)
     {
-        $userID = auth()->user()->id;
-       
-        // if($userID != $request->user()->id) {
-        //     return $this->sendError('Validation Error.', 'User is not the same');     
-        // }   
-
-        // $posts = Survey::where('user_id', $userID)
-        // ->with('questions', 'answers')
-        // // ->with('answers') 
-        // ->latest()
-        // ->get(); 
-
-
-        $surveys = Survey::where('user_id', $userID)->with('surveyOwner')->get();
-
-        // $surveys = Survey::where('user_id', $userID)
-        
-        // ->latest()
-        // ->get();
-
-        // return $this->through('questions')->has('answers');
-
-        // $surveys = Survey::whereBelongsTo('user_id', $userID)->get();
-
-
+        $userID = $request->user()->id; 
+        $surveys = Survey::where('user_id', $userID)->whereNull('deleted_at')->with('questions.answers')->get(); 
         return $this->sendResponse($surveys, 'Survey retrieved successfully.');  
         
     }
@@ -107,6 +85,7 @@ class SurveyController extends BaseController
         $survey_question = SurveyQuestion::create([
             'survey_id' =>  $survey_id,  
             'question' => $request->question,  
+            'multiple_answer' => $request->multiple_answer,  
             'status' => '1',  
         ]); 
 
@@ -123,7 +102,7 @@ class SurveyController extends BaseController
 
         $validator = Validator::make($request->all(), [ 
             'survey_id' => 'required',
-            'question_id' => 'required',
+            'survey_question_id' => 'required',
             'answer' => 'required', 
         ]);  
 
@@ -135,7 +114,7 @@ class SurveyController extends BaseController
 
         $survey_answer = SurveyAnswer::create([
             'survey_id' =>  $survey_id,  
-            'question_id' => $request->question_id,  
+            'survey_question_id' => $request->survey_question_id,  
             'answer' => $request->answer,  
             'status' => '1',  
         ]); 
@@ -156,11 +135,11 @@ class SurveyController extends BaseController
      */
     public function show(Request $request, $id)
     {
-         
+        // return $this->sendResponse($id, 'Survey retrieved successfully.'); 
 
         $survey = Survey::where('user_id', $request->user()->id)
-        ->where('id', $id) 
-        ->get();
+        ->where('id', $id)->whereNull('deleted_at')->with('questions.answers')
+        ->first();
 
 
         if (is_null($survey)) {
@@ -170,6 +149,31 @@ class SurveyController extends BaseController
         return $this->sendResponse($survey, 'Survey retrieved successfully.'); 
     }
     
+
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit(Request $request, $id)
+    {
+        // return $this->sendResponse($id, 'Survey retrieved successfully.'); 
+
+        $survey = Survey::where('user_id', $request->user()->id)
+        ->where('id', $id) 
+        ->first(); 
+
+        if (is_null($survey)) {
+            return $this->sendError('Survey not found.');
+        }
+   
+        return $this->sendResponse($survey, 'Survey retrieved successfully.'); 
+    }
+
+
+
     /**
      * Update the specified resource in storage.
      *
@@ -180,6 +184,7 @@ class SurveyController extends BaseController
     public function update(Request $request, Survey $survey, $survey_id)
     {
  
+        
         return $this->sendResponse('Survey', 'Survey updated successfully.'); 
        
     }
@@ -190,10 +195,73 @@ class SurveyController extends BaseController
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy($surveyId)
     { 
-        $survey = Survey::find($id); 
+        // $survey = Survey::find($id); 
+
+        $survey = Survey::with('questions.answers')->find($surveyId);
+
+        if (!$survey) {
+            return "Survey not found.";
+        }
+
+        // Delete the survey along with its questions and answers
+        $survey->delete();
+        
 
         return $this->sendResponse($survey, 'Survey deleted successfully.'); 
     }
+
+
+
+    public function survey_list(Request $request){
+        $surveys = Survey::where('status', '1')->whereNull('deleted_at')->get(); 
+        return $this->sendResponse($surveys, 'Survey retrieved successfully.');  
+    }
+
+    public function survey_details(Request $request, $id)
+    {
+        $survey = Survey::where('status', '1')->where('id', $id)->whereNull('deleted_at')->with('questions.answers')->first();
+        if (is_null($survey)) {
+            return $this->sendError('Survey not found.');
+        }
+        return $this->sendResponse($survey, 'Survey retrieved successfully.'); 
+    }
+    
+    public function submit_survey_answer(Request $request){
+
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [ 
+            'survey_id' => 'required',
+            'survey_question_id' => 'required',
+            'survey_answer_id' => 'required', 
+        ]);  
+
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());       
+        } 
+
+        $survey_id = $request->survey_id;
+        $user_id = $user->id;
+
+
+        $survey_answer = SurveyResult::updateOrCreate(
+        
+            ['user_id' => $user_id, 'survey_id' =>  $survey_id, 'survey_question_id' => $request->survey_question_id],    
+            [
+                'user_id' =>  $user_id,  
+                'survey_id' =>  $survey_id,  
+                'survey_question_id' => $request->survey_question_id,  
+                'survey_answer_id' => $request->survey_answer_id,  
+                'status' => '1',  
+            ]); 
+
+        $survey_answer_id = $survey_answer->id;
+
+        return $this->sendResponse($survey_answer_id, 'Survey answer added successfully.');
+
+
+    }
+
 }

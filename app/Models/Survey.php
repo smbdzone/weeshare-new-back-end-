@@ -33,7 +33,7 @@ class Survey extends Model
             SurveyQuestion::class,
             SurveyAnswer::class,
             'survey_id', // Foreign key on the questions table...
-            'questionsss_id', // Foreign key on the answers table...
+            'questions_id', // Foreign key on the answers table...
             'id', // Local key on the question table...
             'id' // Local key on the answers table...
         );
@@ -44,6 +44,12 @@ class Survey extends Model
     // {
     //     return $this->hasMany(SurveyQuestion::class, 'survey_id');
     // }
+
+    public function questions()
+    {
+        return $this->hasMany(SurveyQuestion::class);
+    }
+
 
     // public function answers()
     // {

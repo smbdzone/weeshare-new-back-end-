@@ -16,6 +16,7 @@ class PostsMedia extends Model
         'post_type_id',  
         'file_type',  
         'file_name',  
+        'file_url'
     ];
 
 }

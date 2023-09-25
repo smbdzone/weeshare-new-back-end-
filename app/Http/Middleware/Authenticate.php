@@ -5,6 +5,13 @@ namespace App\Http\Middleware;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
 
+
+// use Cache; 
+// use Illuminate\Support\Facades\Auth;
+// use Illuminate\Contracts\Auth\Authenticatable;
+// use App\Http\Requests\ValidateSecretRequest;
+
+
 class Authenticate extends Middleware
 {
     /**

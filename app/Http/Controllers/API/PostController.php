@@ -9,7 +9,9 @@ use App\Models\PostsContent;
 use App\Models\PostsMedia;
 use Validator;
 use App\Http\Resources\PostResource;
-   
+use Carbon\Carbon;
+
+
 class PostController extends BaseController
 {
    
@@ -36,16 +38,23 @@ class PostController extends BaseController
     public function index(Request $request)
     {
         $userID = $request->user()->id;
-        // return $this->sendResponse($userID, 'userID');
+        // return $this->sendResponse(['userID' => $userID, 'request' => $request], 'userID');
    
         if($userID != $request->user()->id) {
             return $this->sendError('Validation Error.', 'User is not the same');     
         }  
 
+        $startDate = $request->from;
+        $endDate = $request->to;
+
+        // $startDate = Carbon::createFromFormat('Y-m-d', $request->from);
+        // $endDate = Carbon::createFromFormat('Y-m-d', $request->to);
+ 
 
         $posts = Post::where('user_id', $userID)
-        ->with('posts_contents')
-        // ->with('posts_medias')
+        ->with('posts_contents')  
+        ->with('posts_medias')
+        ->whereBetween('created_at', [$startDate, $endDate])
         ->latest()
         ->get();
 
@@ -71,6 +80,28 @@ class PostController extends BaseController
 
         
     }
+
+
+
+    public function upload_video(Request $request) {
+        if($request->hasFile('video_file')) {
+
+            $file = $request->file('video_file'); 
+            $filename = $file->getClientOriginalName(); 
+            $extension = $file->getClientOriginalExtension(); 
+
+           
+
+            $file->storeAs('media', $filename, 'public');  
+            $file_url = asset('storage/media/'.$filename);
+
+            
+            return $this->sendResponse(['video_link' => $file_url], 'Video Uploaded');
+        }
+
+    }
+
+
     /**
      * Store a newly created resource in storage.
      *
@@ -148,6 +179,10 @@ class PostController extends BaseController
         // Post = 'Images'
         // Reel = 'Video', GIF
         // Story = 'Images and Videos'
+
+
+ 
+
  
         $images_mixed = false;
         $videos_mixed = false;
@@ -185,9 +220,9 @@ class PostController extends BaseController
 
 
                 $file->storeAs('media', $filename, 'public');  
-                $file_url = url('storage/app/public/media/'.$filename);
+                $file_url = asset('storage/media/'.$filename);
  
-                PostsMedia::create([
+                $post_media = PostsMedia::create([
                     'user_id' => $request->user()->id,
                     'post_id' => $post_id,	
                     // 'post_content_id' => $social_id[$i],
@@ -197,7 +232,12 @@ class PostController extends BaseController
                     'file_url' => $file_url,	 
                 ]);
 
-                array_push($file_urls, $file_url);
+                $file_url = stripslashes($post_media->file_url);
+                array_push($file_urls, $file_url );
+
+                // return response()->json(
+                //     ['url' => 'https://www.domain.com/api/test'], 200, [], JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT
+                //     );
   
             }
    
@@ -207,7 +247,7 @@ class PostController extends BaseController
 
         array_push($array_return['file_urls'], $file_urls);
 
-        return $this->sendResponse($array_return, 'File extensions checks');
+        return $this->sendResponse($array_return, 'Post Media');
 
         // for ($i=0; $i < count($social_id); $i++) {    
            

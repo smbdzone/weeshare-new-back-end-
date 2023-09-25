@@ -5,7 +5,7 @@
 namespace App\Http\Controllers\API;
 
    
-
+use App\Models\ReferralCode; 
 use App\Models\EmailConfig; 
 use App\Models\EmailTemplate;
 use App\Models\PasswordResetToken;
@@ -31,7 +31,6 @@ use Mail;
 // use App\Mail\LaraEmail;
 
 class RegisterController extends BaseController
-
 {
 
     /**
@@ -46,6 +45,9 @@ class RegisterController extends BaseController
 
     public function register(Request $request)
     {
+
+
+        // return $this->sendResponse($request->all(), 'request');
 
         $validator = Validator::make($request->all(), [
 
@@ -73,15 +75,38 @@ class RegisterController extends BaseController
 
         }
 
+        // $ref_code_check =  ReferralCode::where('code', $request->referral_code)->where('used', 0)->first();
+        // return $this->sendResponse($ref_code_check, "Referral code is already used.");
+
+        if($request->referral_code) {
+            $ref_code_check =  ReferralCode::where('code', $request->referral_code)->first();
+           if($ref_code_check->used == '1') {
+                return $this->sendError("Referral code is already used.");
+           }
+        }
+
    
 
         $input = $request->all();
+
+        if($request->user_type == 'Advertiser') { 
+            $current_role_id = '1';
+        } else if($request->user_type == 'Publisher'){
+            $current_role_id = '2';
+        }
+        else {
+            return $this->sendError('Validation Error.', 'Please select the user type to continue.');       
+        }
+
+        // $roles = Role::pluck('name','name')->all();
+        // return $this->sendResponse($roles, 'User register successfully.');
 
         $input['password'] = bcrypt($input['password']);
 
         $user = User::create(
             [
-                'current_role_id' => $request->user_type,
+                'current_role_id' => $current_role_id,
+                'user_type' => $request->user_type,
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => $request->password,  
@@ -98,7 +123,14 @@ class RegisterController extends BaseController
                 $request->user_type
             ];
 
+            // $user->assignRole('Publisher');
             $user->assignRole($roles);
+
+            if($request->referral_code) {
+                $ref  = ReferralController::use($request->referral_code, $user_id);
+            }
+
+            // return $this->sendResponse($ref, 'ref');
 
             $success['user_type'] =  $user->user_type; 
             $success['name'] =  $user->name;  
@@ -291,6 +323,8 @@ class RegisterController extends BaseController
                 $user = Auth::user(); 
                 $success['session'] = $request->session()->regenerate();
                 $success['token'] =  $user->createToken('MyApp')->plainTextToken; 
+                $success['current_role_id'] =  $user->current_role_id; 
+                // $success['current_role'] =  $user->current_role_id; 
                 $success['user_type'] =  $user->user_type; 
                 $success['name'] =  $user->name;  
                 $success['email'] =  $user->email; 

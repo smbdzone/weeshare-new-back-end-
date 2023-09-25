@@ -5,14 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SurveyResult extends Model
+class Transaction extends Model
 {
     use HasFactory;
 
     protected $fillable = [ 
+        'transaction_type',
         'user_id',
-        'survey_id',
-        'survey_question_id',
-        'survey_answer_id', 
+        'by_user_id',
+        'account_type_id',
+        'advertisement_id',
+        'credit',
+        'debit',
+        'payment_status'	
     ];
 }

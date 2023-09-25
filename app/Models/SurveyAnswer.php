@@ -11,8 +11,15 @@ class SurveyAnswer extends Model
 
     protected $fillable = [ 
         'survey_id',
-        'question_id',
+        'survey_question_id',
         'answer', 
         'status', 
     ];
+
+
+    public function question()
+    {
+        return $this->belongsTo(SurveyQuestion::class);
+    }
+
 }

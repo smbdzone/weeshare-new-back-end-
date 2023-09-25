@@ -13,11 +13,22 @@ class SurveyQuestion extends Model
         'survey_id',
         'question',
         'status', 
+        'multiple_answer'
     ];
 
+    // public function answers()
+    // {
+    //     return $this->hasMany(SurveyAnswer::class, 'question_id');
+    // }
+    
     public function answers()
     {
-        return $this->hasMany(SurveyAnswer::class, 'question_id');
+        return $this->hasMany(SurveyAnswer::class);
     }
-    
+
+    public function survey()
+    {
+        return $this->belongsTo(Survey::class);
+    }
+
 }
